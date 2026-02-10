@@ -1,0 +1,34 @@
+# Build artifacts
+/build/
+/dist/
+bin/
+
+# Test coverage
+coverage.out
+coverage.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Binary
+/esq
+/esq.exe
+*.exe
+
+# Config (local development)
+.env
+
+# Go
+/vendor/
+
+# Air (hot reload)
+/tmp/
+.claude/

@@ -1,0 +1,87 @@
+name: Go
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+# Cancel old runs when new commit pushed to PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    # Skip job if PR is draft or has WIP in title
+    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(github.event.pull_request.title, 'WIP'))
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./go.mod
+          cache: true
+
+      - name: Set up golangci-lint cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/golangci-lint
+          key: golangci-${{ hashFiles('.golangci.yml') }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            golangci-${{ hashFiles('.golangci.yml') }}-
+            golangci-
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          only-new-issues: ${{ github.event_name == 'pull_request' }}
+          skip-cache: true  # Use our custom cache
+          problem-matchers: true
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    # Skip job if PR is draft or has WIP in title
+    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(github.event.pull_request.title, 'WIP'))
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./go.mod
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race ./...
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./go.mod
+          cache: true
+
+      - name: Build
+        run: go build -ldflags "-s -w" -o build/esq ./cmd/esq
