@@ -9,7 +9,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 # Cancel old runs when new commit pushed to PR
 concurrency:
@@ -68,55 +67,12 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: coverage
-          path: coverage.out
-
-  coverage:
-    name: Coverage Report
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
-    permissions:
-      contents: read
-      actions: read
-      pull-requests: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Download coverage artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: coverage
-
-      - name: Post coverage report
-        uses: fgrosse/go-coverage-report@v1.2.0
-        with:
-          coverage-artifact-name: "coverage"
-          coverage-file-name: "coverage.out"
+        run: go test -v -race ./...
 
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: [lint, test]
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
-          - goos: windows
-            goarch: amd64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -128,24 +84,4 @@ jobs:
           cache: true
 
       - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
-          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}"
-
-          BINARY_NAME="esq"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY_NAME="esq.exe"
-          fi
-
-          go build -ldflags "${LDFLAGS}" -o "build/${BINARY_NAME}" ./cmd/esq
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v6
-        with:
-          name: esq-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/
+        run: go build -ldflags "-s -w" -o build/esq ./cmd/esq
