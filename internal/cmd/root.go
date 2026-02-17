@@ -24,15 +24,16 @@ func Execute(ver, commit string) int {
 
 	rootCmd := &cobra.Command{
 		Use:   "esq",
-		Short: "Elasticsearch Query CLI for NegSoft",
+		Short: "Elasticsearch Query CLI",
 		Long:  "Query and inspect Elasticsearch clusters across environments (prod, stage, local).",
 		Example: `  # Set up environments
-  esq config add prod --url http://10.11.20.41:9200
-  esq config add stage --url http://10.11.20.44:9200
+  esq config add prod --url http://es-prod:9200
+  esq config add stage --url http://es-stage:9200
+  esq config add local --url http://localhost:9200
   esq config use prod
 
   # Search for a document
-  esq search documents "DocumentNo:12813636"
+  esq search my-index "title:hello"
 
   # Check cluster health
   esq health`,
@@ -139,7 +140,7 @@ func newGetCmd() *cobra.Command {
 		Use:   "get <index> <doc-id>",
 		Short: "Get a document by its _id",
 		Example: `  esq get documents abc123
-  esq get erp.sales.documents_v30.1.0 offer-122116`,
+  esq get my-index_v2.0.0 doc-42`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, envName, err := getClient()
@@ -166,8 +167,8 @@ func newCountCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "count <index> [query]",
 		Short: "Count documents in an index",
-		Example: `  esq count customer
-  esq count documents "DocumentStateId:2"`,
+		Example: `  esq count users
+  esq count documents "status:active"`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, envName, err := getClient()
@@ -205,8 +206,8 @@ func newQueryCmd() *cobra.Command {
 		Use:   "query <index> <json-body>",
 		Short: "Search with Elasticsearch Query DSL",
 		Long:  "Execute a full Query DSL search. Pass the JSON body as a string argument.",
-		Example: `  esq query documents '{"query":{"term":{"DocumentNo":12813636}}}'
-  esq query documents '{"query":{"match_all":{}},"size":1,"_source":["DocumentNo","DocumentStateId"]}'`,
+		Example: `  esq query my-index '{"query":{"term":{"title":"hello"}}}'
+  esq query my-index '{"query":{"match_all":{}},"size":1,"_source":["title","status"]}'`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, envName, err := getClient()
@@ -270,7 +271,7 @@ func newMappingCmd() *cobra.Command {
 		Use:   "mapping <index>",
 		Short: "Show index field mapping",
 		Example: `  esq mapping documents
-  esq mapping erp.sales.documents_v30.1.0`,
+  esq mapping my-index_v2.0.0`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, envName, err := getClient()

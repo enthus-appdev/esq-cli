@@ -7,11 +7,11 @@ Query and inspect Elasticsearch clusters across environments from the command li
 Requires Go 1.24+.
 
 ```bash
-# Via go install (requires SSH access to the repo)
-GOPRIVATE=github.com/enthus-appdev/* go install github.com/enthus-appdev/esq-cli/cmd/esq@latest
+# Via go install
+go install github.com/enthus-appdev/esq-cli/cmd/esq@latest
 
 # Or clone and build
-git clone git@github.com:enthus-appdev/esq-cli.git
+git clone https://github.com/enthus-appdev/esq-cli.git
 cd esq-cli
 make install   # builds and copies to ~/bin/
 ```
@@ -23,9 +23,9 @@ Ensure `~/go/bin` or `~/bin` is in your `PATH`.
 Add your Elasticsearch environments:
 
 ```bash
-esq config add prod  --url http://10.11.20.41:9200
-esq config add stage --url http://10.11.20.44:9200
-esq config add local --url http://localhost:29200
+esq config add prod  --url http://es-prod:9200
+esq config add stage --url http://es-stage:9200
+esq config add local --url http://localhost:9200
 esq config use prod
 ```
 
@@ -37,23 +37,23 @@ Config is stored at `~/.config/esq/config.json`.
 
 ```bash
 # Lucene query string syntax
-esq search documents "DocumentNo:12345"
-esq search customer "CustomerName:Müller" --size 50
-esq search documents "DocumentStateId:2 AND CustomerName:enthus"
+esq search my-index "title:hello"
+esq search users "name:John" --size 50
+esq search logs "level:error AND service:api"
 
 # Filter returned fields
-esq search documents "DocumentNo:12345" --source DocumentNo,DocumentStateId
+esq search my-index "title:hello" --source title,status
 
 # Full Query DSL
-esq query documents '{"query":{"term":{"DocumentNo":12345}},"_source":["DocumentNo","DocumentStateId"]}'
+esq query my-index '{"query":{"term":{"title":"hello"}},"_source":["title","status"]}'
 ```
 
 ### Getting & Counting
 
 ```bash
-esq get documents offer-122116      # Get by _id
-esq count customer                  # Count all docs
-esq count documents "Status:active" # Count matching
+esq get documents doc-42            # Get by _id
+esq count users                     # Count all docs
+esq count logs "level:error"        # Count matching
 ```
 
 ### Cluster Info
@@ -61,7 +61,7 @@ esq count documents "Status:active" # Count matching
 ```bash
 esq health              # Cluster health + node stats
 esq indices             # List all indices
-esq indices sales       # Filter by name
+esq indices logs        # Filter by name
 esq mapping documents   # Show field mapping
 ```
 
@@ -78,10 +78,9 @@ You don't need to type full versioned index names. Partial names auto-resolve to
 
 | You type | Resolves to |
 |----------|-------------|
-| `documents` | `erp.sales.documents_v30.1.0` |
-| `customer` | `crm.customer_v15.0.0` |
-| `items` | `erp.items_v15.0.0` |
-| `servicetickets` | `jira.servicetickets_v4.0.0` |
+| `logs` | `logs_v3.0.0` |
+| `users` | `users_v2.1.0` |
+| `metrics` | `metrics_v1.5.0` |
 
 If multiple indices match, the latest version is used and alternatives are shown.
 
@@ -90,8 +89,8 @@ If multiple indices match, the latest version is used and alternatives are shown
 Info messages go to stderr, data to stdout — safe for piping:
 
 ```bash
-esq search documents "DocumentNo:12345" | jq '.hits.hits[]._source'
-esq count customer 2>/dev/null | jq .count
+esq search my-index "title:hello" | jq '.hits.hits[]._source'
+esq count users 2>/dev/null | jq .count
 ```
 
 ## Shell Completion
@@ -115,3 +114,7 @@ make install   # Build + copy to ~/bin/
 make lint      # goimports + golangci-lint
 make test      # Run tests
 ```
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.

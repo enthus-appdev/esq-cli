@@ -14,7 +14,7 @@ func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage Elasticsearch environments",
-		Example: `  esq config add prod --url http://10.11.20.41:9200
+		Example: `  esq config add prod --url http://es-prod:9200
   esq config use prod
   esq config list`,
 	}
@@ -35,9 +35,9 @@ func newAddCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add <name>",
 		Short: "Add an Elasticsearch environment",
-		Example: `  esq config add prod --url http://10.11.20.41:9200
-  esq config add stage --url http://10.11.20.44:9200
-  esq config add local --url http://localhost:29200`,
+		Example: `  esq config add prod --url http://es-prod:9200
+  esq config add stage --url http://es-stage:9200
+  esq config add local --url http://localhost:9200`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]

@@ -23,11 +23,11 @@ func NewSearchCmd() *cobra.Command {
 		Short: "Search with a Lucene query string",
 		Long: `Search an Elasticsearch index using Lucene query syntax.
 
-Index names support partial matching - "documents" resolves to the latest
-version of erp.sales.documents. Use full names for exact matches.`,
-		Example: `  esq search documents "DocumentNo:12813636"
-  esq search customer "Name:Müller" --size 50
-  esq search documents "DocumentStateId:2 AND CustomerName:enthus"`,
+Index names support partial matching - a partial name resolves to the latest
+matching versioned index. Use full names for exact matches.`,
+		Example: `  esq search my-index "title:hello"
+  esq search users "name:John" --size 50
+  esq search logs "level:error AND service:api"`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client, envName, err := getClient(cmd)
@@ -56,7 +56,7 @@ version of erp.sales.documents. Use full names for exact matches.`,
 	}
 
 	cmd.Flags().IntVarP(&size, "size", "s", 10, "Maximum number of results")
-	cmd.Flags().StringSliceVar(&source, "source", nil, "Limit returned fields (e.g. --source DocumentNo,DocumentStateId)")
+	cmd.Flags().StringSliceVar(&source, "source", nil, "Limit returned fields (e.g. --source title,status)")
 
 	return cmd
 }
