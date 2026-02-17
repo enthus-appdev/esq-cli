@@ -7,16 +7,10 @@ Query and inspect Elasticsearch clusters across environments from the command li
 Requires Go 1.24+.
 
 ```bash
-# Via go install
 go install github.com/enthus-appdev/esq-cli/cmd/esq@latest
-
-# Or clone and build
-git clone https://github.com/enthus-appdev/esq-cli.git
-cd esq-cli
-make install   # builds and copies to ~/bin/
 ```
 
-Ensure `~/go/bin` or `~/bin` is in your `PATH`.
+Ensure `~/go/bin` is in your `PATH`.
 
 ## Setup
 
@@ -109,10 +103,9 @@ esq completion fish > ~/.config/fish/completions/esq.fish
 ## Development
 
 ```bash
-make build     # Build to bin/esq
-make install   # Build + copy to ~/bin/
-make lint      # goimports + golangci-lint
-make test      # Run tests
+go build ./cmd/esq              # Build the binary
+go test -race ./...             # Run tests
+golangci-lint run               # Lint
 ```
 
 ## License

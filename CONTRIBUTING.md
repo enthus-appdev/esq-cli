@@ -7,9 +7,9 @@ Thanks for your interest in contributing! Here's how to get started.
 ```bash
 git clone https://github.com/enthus-appdev/esq-cli.git
 cd esq-cli
-make build    # Build the binary
-make test     # Run tests
-make lint     # Run goimports + golangci-lint
+go build ./cmd/esq      # Build the binary
+go test -race ./...     # Run tests
+golangci-lint run        # Lint
 ```
 
 Requires Go 1.24+ and [golangci-lint](https://golangci-lint.run/).
@@ -18,7 +18,7 @@ Requires Go 1.24+ and [golangci-lint](https://golangci-lint.run/).
 
 1. Fork the repository and create a feature branch from `main`
 2. Write your code and add tests where appropriate
-3. Run `make lint && make test` to ensure all checks pass
+3. Run `golangci-lint run && go test -race ./...` to ensure all checks pass
 4. Commit with a clear message describing the change
 5. Open a pull request against `main`
 
