@@ -105,7 +105,7 @@ func getClient(cmd *cobra.Command) (*es.Client, string, error) {
 		return nil, "", fmt.Errorf("environment %q not found", envName)
 	}
 
-	return es.NewClient(env.URL), envName, nil
+	return es.NewClient(env.URL, env.Username, env.Password), envName, nil
 }
 
 // resolveIndex resolves a partial index name and prints info about ambiguity.

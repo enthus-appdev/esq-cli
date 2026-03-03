@@ -1,12 +1,16 @@
 package configcmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"sort"
+	"strings"
 
 	"github.com/enthus-appdev/esq-cli/internal/config"
 	"github.com/enthus-appdev/esq-cli/internal/output"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 // NewConfigCmd creates the config command group.
@@ -30,13 +34,14 @@ func NewConfigCmd() *cobra.Command {
 }
 
 func newAddCmd() *cobra.Command {
-	var url string
+	var url, user, password string
+	var passwordStdin bool
 
 	cmd := &cobra.Command{
 		Use:   "add <name>",
 		Short: "Add an Elasticsearch environment",
 		Example: `  esq config add prod --url http://es-prod:9200
-  esq config add stage --url http://es-stage:9200
+  esq config add stage --url http://es-stage:9200 --user elastic --password-stdin
   esq config add local --url http://localhost:9200`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -46,13 +51,42 @@ func newAddCmd() *cobra.Command {
 				return fmt.Errorf("--url is required\n\nExample:\n  esq config add %s --url http://hostname:9200", name)
 			}
 
+			if password != "" && passwordStdin {
+				return fmt.Errorf("--password and --password-stdin are mutually exclusive")
+			}
+
+			// Read password from stdin if requested
+			if passwordStdin {
+				if term.IsTerminal(int(os.Stdin.Fd())) {
+					fmt.Fprint(os.Stderr, "Password: ")
+					raw, err := term.ReadPassword(int(os.Stdin.Fd()))
+					fmt.Fprintln(os.Stderr)
+					if err != nil {
+						return fmt.Errorf("reading password: %w", err)
+					}
+					password = string(raw)
+				} else {
+					scanner := bufio.NewScanner(os.Stdin)
+					if scanner.Scan() {
+						password = strings.TrimRight(scanner.Text(), "\r\n")
+					}
+					if err := scanner.Err(); err != nil {
+						return fmt.Errorf("reading password from stdin: %w", err)
+					}
+				}
+			}
+
 			cfg, err := config.Load()
 			if err != nil {
 				return err
 			}
 
 			_, exists := cfg.Environments[name]
-			cfg.Environments[name] = &config.Environment{URL: url}
+			cfg.Environments[name] = &config.Environment{
+				URL:      url,
+				Username: user,
+				Password: password,
+			}
 
 			// Auto-set as current if it's the first environment
 			if cfg.CurrentEnv == "" {
@@ -69,6 +103,10 @@ func newAddCmd() *cobra.Command {
 				output.Success("Added environment %q (url: %s)", name, url)
 			}
 
+			if user != "" {
+				output.Info("Basic auth: %s", user)
+			}
+
 			if cfg.CurrentEnv == name {
 				output.Info("Active environment: %s", name)
 			}
@@ -78,6 +116,9 @@ func newAddCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&url, "url", "", "Elasticsearch base URL (e.g. http://hostname:9200)")
+	cmd.Flags().StringVar(&user, "user", "", "Username for basic authentication")
+	cmd.Flags().StringVar(&password, "password", "", "Password for basic authentication (visible in shell history, prefer --password-stdin)")
+	cmd.Flags().BoolVar(&passwordStdin, "password-stdin", false, "Read password from stdin (prompted interactively if terminal)")
 
 	return cmd
 }
@@ -139,7 +180,11 @@ func newListCmd() *cobra.Command {
 				if name == cfg.CurrentEnv {
 					marker = "* "
 				}
-				fmt.Printf("%s%-10s %s\n", marker, name, env.URL)
+				auth := ""
+				if env.Username != "" {
+					auth = fmt.Sprintf(" (auth: %s)", env.Username)
+				}
+				fmt.Printf("%s%-10s %s%s\n", marker, name, env.URL, auth)
 			}
 
 			return nil

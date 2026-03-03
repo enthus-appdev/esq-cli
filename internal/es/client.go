@@ -14,13 +14,17 @@ import (
 // Client is an Elasticsearch HTTP client.
 type Client struct {
 	baseURL    string
+	username   string
+	password   string
 	httpClient *http.Client
 }
 
 // NewClient creates a new Elasticsearch client.
-func NewClient(baseURL string) *Client {
+func NewClient(baseURL, username, password string) *Client {
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
+		baseURL:  strings.TrimRight(baseURL, "/"),
+		username: username,
+		password: password,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -38,6 +42,10 @@ func (c *Client) request(method, path string, body io.Reader) ([]byte, error) {
 
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
+	}
+
+	if c.username != "" {
+		req.SetBasicAuth(c.username, c.password)
 	}
 
 	resp, err := c.httpClient.Do(req)
