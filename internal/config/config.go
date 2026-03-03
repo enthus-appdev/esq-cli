@@ -17,7 +17,9 @@ type Config struct {
 
 // Environment represents a single Elasticsearch cluster.
 type Environment struct {
-	URL string `json:"url"`
+	URL      string `json:"url"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
 }
 
 // configPath returns the path to the config file, respecting XDG_CONFIG_HOME.

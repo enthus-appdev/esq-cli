@@ -30,13 +30,13 @@ func NewConfigCmd() *cobra.Command {
 }
 
 func newAddCmd() *cobra.Command {
-	var url string
+	var url, user, password string
 
 	cmd := &cobra.Command{
 		Use:   "add <name>",
 		Short: "Add an Elasticsearch environment",
 		Example: `  esq config add prod --url http://es-prod:9200
-  esq config add stage --url http://es-stage:9200
+  esq config add stage --url http://es-stage:9200 --user elastic --password secret
   esq config add local --url http://localhost:9200`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -52,7 +52,11 @@ func newAddCmd() *cobra.Command {
 			}
 
 			_, exists := cfg.Environments[name]
-			cfg.Environments[name] = &config.Environment{URL: url}
+			cfg.Environments[name] = &config.Environment{
+				URL:      url,
+				Username: user,
+				Password: password,
+			}
 
 			// Auto-set as current if it's the first environment
 			if cfg.CurrentEnv == "" {
@@ -69,6 +73,10 @@ func newAddCmd() *cobra.Command {
 				output.Success("Added environment %q (url: %s)", name, url)
 			}
 
+			if user != "" {
+				output.Info("Basic auth: %s", user)
+			}
+
 			if cfg.CurrentEnv == name {
 				output.Info("Active environment: %s", name)
 			}
@@ -78,6 +86,8 @@ func newAddCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&url, "url", "", "Elasticsearch base URL (e.g. http://hostname:9200)")
+	cmd.Flags().StringVar(&user, "user", "", "Username for basic authentication")
+	cmd.Flags().StringVar(&password, "password", "", "Password for basic authentication")
 
 	return cmd
 }
@@ -139,7 +149,11 @@ func newListCmd() *cobra.Command {
 				if name == cfg.CurrentEnv {
 					marker = "* "
 				}
-				fmt.Printf("%s%-10s %s\n", marker, name, env.URL)
+				auth := ""
+				if env.Username != "" {
+					auth = fmt.Sprintf(" (auth: %s)", env.Username)
+				}
+				fmt.Printf("%s%-10s %s%s\n", marker, name, env.URL, auth)
 			}
 
 			return nil
