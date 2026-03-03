@@ -68,8 +68,12 @@ func Save(cfg *Config) error {
 	}
 	data = append(data, '\n')
 
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return fmt.Errorf("writing config: %w", err)
+	}
+	// Ensure restrictive permissions even if file already existed with wider perms.
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("setting config permissions: %w", err)
 	}
 	return nil
 }
