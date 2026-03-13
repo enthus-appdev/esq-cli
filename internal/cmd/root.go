@@ -79,7 +79,7 @@ func getClient() (*es.Client, string, error) {
 		return nil, "", fmt.Errorf("environment %q not found (available: %s)", envName, formatEnvList(cfg))
 	}
 
-	return es.NewClient(env.URL), envName, nil
+	return es.NewClient(env.URL, env.Username, env.Password), envName, nil
 }
 
 func formatEnvList(cfg *config.Config) string {
