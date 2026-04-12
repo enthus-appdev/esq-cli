@@ -27,121 +27,7 @@ jobs:
       - name: Run tests
         run: go test -v -race ./...
 
-      - name: Build binaries
-        run: |
-          VERSION=${GITHUB_REF_NAME}
-          COMMIT=$(git rev-parse --short HEAD)
-          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}"
-
-          mkdir -p dist
-
-          # Build for each platform
-          platforms=(
-            "linux/amd64"
-            "linux/arm64"
-            "darwin/amd64"
-            "darwin/arm64"
-            "windows/amd64"
-            "windows/arm64"
-          )
-
-          for platform in "${platforms[@]}"; do
-            GOOS=${platform%/*}
-            GOARCH=${platform#*/}
-
-            output_name="esq-${GOOS}-${GOARCH}"
-            if [ "$GOOS" = "windows" ]; then
-              output_name+=".exe"
-            fi
-
-            echo "Building $output_name..."
-            GOOS=$GOOS GOARCH=$GOARCH go build -ldflags "${LDFLAGS}" -o "dist/${output_name}" ./cmd/esq
-          done
-
-          # Create archives
-          cd dist
-          for file in esq-*; do
-            if [[ "$file" == *.exe ]]; then
-              zip "${file%.exe}.zip" "$file"
-              rm "$file"
-            else
-              tar czf "${file}.tar.gz" "$file"
-              rm "$file"
-            fi
-          done
-
-          # Generate checksums
-          sha256sum * > checksums.txt
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          # Get previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-
-          if [ -n "$PREV_TAG" ]; then
-            echo "Generating changelog from $PREV_TAG to $GITHUB_REF_NAME"
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" "$PREV_TAG".."$GITHUB_REF_NAME" --no-merges)
-          else
-            echo "No previous tag found, including all commits"
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" --no-merges)
-          fi
-
-          # Escape for GitHub Actions
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          body: |
-            ## What's Changed
-
-            ${{ steps.changelog.outputs.changelog }}
-
-            ## Installation
-
-            ### Homebrew (macOS and Linux)
-            ```bash
-            brew install enthus-appdev/tap/esq
-            ```
-
-            ### macOS (Apple Silicon)
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/esq-darwin-arm64.tar.gz | tar xz
-            chmod +x esq-darwin-arm64
-            sudo mv esq-darwin-arm64 /usr/local/bin/esq
-            ```
-
-            ### macOS (Intel)
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/esq-darwin-amd64.tar.gz | tar xz
-            chmod +x esq-darwin-amd64
-            sudo mv esq-darwin-amd64 /usr/local/bin/esq
-            ```
-
-            ### Linux (x64)
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/esq-linux-amd64.tar.gz | tar xz
-            chmod +x esq-linux-amd64
-            sudo mv esq-linux-amd64 /usr/local/bin/esq
-            ```
-
-            ### Windows
-            Download `esq-windows-amd64.zip` and add to your PATH.
-
-            ## Checksums
-
-            See `checksums.txt` for SHA256 checksums of all binaries.
-          files: |
-            dist/*
-          draft: false
-          prerelease: ${{ contains(github.ref_name, '-') }}
-
-      - name: Generate GitHub App token for tap bump
+      - name: Generate GitHub App token for tap
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
@@ -150,22 +36,12 @@ jobs:
           owner: enthus-appdev
           repositories: homebrew-tap
 
-      - name: Get GitHub App user ID
-        id: app-user
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: |
-          USER_ID=$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)
-          echo "user-id=$USER_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Bump Homebrew tap formula
-        uses: dawidd6/action-homebrew-bump-formula@v7
-        continue-on-error: true
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          token: ${{ steps.app-token.outputs.token }}
-          no_fork: true
-          tap: enthus-appdev/homebrew-tap
-          formula: esq
-          tag: ${{ github.ref_name }}
-          user_name: ${{ steps.app-token.outputs.app-slug }}[bot]
-          user_email: ${{ steps.app-user.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ steps.app-token.outputs.token }}
