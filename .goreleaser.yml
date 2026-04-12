@@ -48,7 +48,7 @@ release:
     ### Binary download
     Download the archive for your platform below, extract, and add to your PATH.
 
-homebrews:
+brews:
   - name: esq
     repository:
       owner: enthus-appdev
