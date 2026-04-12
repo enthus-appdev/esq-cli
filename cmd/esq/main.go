@@ -6,12 +6,9 @@ import (
 	"github.com/enthus-appdev/esq-cli/internal/cmd"
 )
 
-var (
-	version = "dev"
-	commit  = "none"
-)
+var version = "dev"
 
 func main() {
-	exitCode := cmd.Execute(version, commit)
+	exitCode := cmd.Execute(version)
 	os.Exit(exitCode)
 }

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	configcmd "github.com/enthus-appdev/esq-cli/internal/cmd/config"
@@ -16,7 +17,8 @@ import (
 var envOverride string
 
 // Execute runs the root command and returns the exit code.
-func Execute(ver, commit string) int {
+func Execute(ver string) int {
+	commit, date := vcsInfo()
 	rootCmd := &cobra.Command{
 		Use:   "esq",
 		Short: "Elasticsearch Query CLI",
@@ -34,7 +36,7 @@ func Execute(ver, commit string) int {
   esq health`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		Version:       fmt.Sprintf("%s (commit: %s)", ver, commit),
+		Version:       fmt.Sprintf("%s\ncommit: %s\nbuilt:  %s", ver, commit, date),
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&envOverride, "env", "e", "", "Override active environment")
@@ -126,6 +128,27 @@ func joinStrings(ss []string) string {
 		result += s
 	}
 	return result
+}
+
+func vcsInfo() (commit, date string) {
+	commit, date = "unknown", "unknown"
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	for _, s := range info.Settings {
+		switch s.Key {
+		case "vcs.revision":
+			if len(s.Value) >= 7 {
+				commit = s.Value[:7]
+			} else {
+				commit = s.Value
+			}
+		case "vcs.time":
+			date = s.Value
+		}
+	}
+	return
 }
 
 // --- Simple commands (kept in root.go since they're small) ---
